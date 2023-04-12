@@ -37,8 +37,8 @@ int main(void)
 	rotation.at<float>(1, 2) = 1;
 	rotation.at<float>(2, 1) = -1;
 
-	R0 = (R0*rotation).inv();
-	t0 = R0 * t0;
+	R0 = (R0 * rotation).inv();
+	t0 = -R0 * t0;
 	Camera camera = { K, R0, t0 };
 	const string prefix = "D:/TRAMWAY/get.358/results_v_diplom/";
 	ofstream output_file1(prefix + "vanilla1.txt");
