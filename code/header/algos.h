@@ -149,7 +149,7 @@ vector<Point> get_points_from_rails(Mat& src, Mat& rails_masks, Size& size) // �
 	return rails;
 }
 
-vector<Mat> get_3d_coords(Camera& camera, vector<Point> pts2d)
+vector<Mat> get_3d_coords(Camera& camera, vector<Point> pts2d) // на данный момент не используется - не обращайте внимание 
 {
 	float fx = camera.K.at<float>(0, 0);
 	float cx = camera.K.at<float>(0, 2);
