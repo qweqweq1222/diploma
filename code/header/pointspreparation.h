@@ -1,6 +1,6 @@
 #pragma once
 #include "reader.h"
-Mat estimate(Point pt, Mat& R0, Mat& t0, Mat& K) // оценка точек в ск камеры
+Mat estimate(Point pt, Mat& R0, Mat& t0, Mat& K) // РЅРµ РѕР±СЂР°С‰Р°Р№С‚Рµ РІРЅРёРјР°РЅРёРµ 
 {
 	Mat Rt = Mat::eye(Size(4, 3), CV_32FC1);
 
@@ -30,7 +30,7 @@ Mat estimate(Point pt, Mat& R0, Mat& t0, Mat& K) // оценка точек в ск камеры
 	return Rt * pt3d_camera;
 }
 
-Mat general_estimate(Point pt, Mat& R0, Mat& t0, Mat& K, Mat& plane) // общая оценка точки, лежащий на плоскости Ax + By + Cz + D = 0, которая задется Mat plane в СК робота
+Mat general_estimate(Point pt, Mat& R0, Mat& t0, Mat& K, Mat& plane) // РїРѕ С‚РѕС‡РєРµ РЅР° РјР°С‚СЂРёС†Рµ РєР°РјРµСЂС‹ (Р·РЅР°СЏ, С‡С‚Рѕ РѕРЅР° Р»РµР¶РёС‚ РІ РіР»РѕР±Р°Р»СЊРЅРѕР№ РЎРљ РІ РїР»РѕСЃРєРѕСЃС‚Рё plane) РѕС†РµРЅРёРІР°РµРј РµРµ РєРѕРѕСЂРґРёРЅР°С‚С‹ РІ РіР»РѕР±Р°Р»СЊРЅРѕР№ РЎРљ
 {
 	Mat Rt = Mat::eye(Size(4, 3), CV_32FC1);
 
@@ -53,9 +53,9 @@ Mat general_estimate(Point pt, Mat& R0, Mat& t0, Mat& K, Mat& plane) // общая оц
 
 	return pt3d;
 }
-bool is_dynamic(Mat& frame, Mat mask, Point pt, vector<int>& dynamic_classes, const int kernel = 11) // проверяем, чтобы в окрестности точек не было динамических объектов
+bool is_dynamic(Mat& frame, Mat mask, Point pt, vector<int>& dynamic_classes, const int kernel = 11) // РЅРµ РѕР±СЂР°С‰Р°Р№С‚Рµ РІРЅРёРјР°РЅРёРµ 
 {
-	resize(mask, mask, frame.size()); // маски другого размера по дефолту
+	resize(mask, mask, frame.size()); /
 	int xl = pt.x - round(kernel / 2) < 0 ? 0 : pt.x - round(kernel / 2);
 	int yl = pt.y - round(kernel / 2) < 0 ? 0 : pt.y - round(kernel / 2);
 	int xu = pt.x + round(kernel / 2) > (frame.cols - 1) ? (frame.cols - 1) : pt.x + round(kernel / 2);
