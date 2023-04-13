@@ -55,7 +55,7 @@ Mat general_estimate(Point pt, Mat& R0, Mat& t0, Mat& K, Mat& plane) // по т�
 }
 bool is_dynamic(Mat& frame, Mat mask, Point pt, vector<int>& dynamic_classes, const int kernel = 11) // не обращайте внимание 
 {
-	resize(mask, mask, frame.size()); /
+	resize(mask, mask, frame.size()); //
 	int xl = pt.x - round(kernel / 2) < 0 ? 0 : pt.x - round(kernel / 2);
 	int yl = pt.y - round(kernel / 2) < 0 ? 0 : pt.y - round(kernel / 2);
 	int xu = pt.x + round(kernel / 2) > (frame.cols - 1) ? (frame.cols - 1) : pt.x + round(kernel / 2);
