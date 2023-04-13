@@ -1,14 +1,7 @@
 #pragma once
 #include "algos.h"
 
-/*
-*	1. определяем особые точки через дискрипторы или оптический поток 
-*	2. производим оценку [R|t] с учетом скоростей из IMU системы
-*   3. Сравниваем результаты без масок, с масками, с проверкой окрестностей между потоком и дискрипторами 
-*/
-
-
-pair<vector<Point2f>, vector<Point2f>> get_flow(const vector<Point2f>& start, const Mat& current, const Mat& next)
+pair<vector<Point2f>, vector<Point2f>> get_flow(const vector<Point2f>& start, const Mat& current, const Mat& next) 
 {
 	Mat current_gray, next_gray;
 	vector<Point2f> end;
@@ -30,10 +23,12 @@ pair<vector<Point2f>, vector<Point2f>> get_flow(const vector<Point2f>& start, co
 	}
 	return { kp_current, kp_next };
 }
+
 void no_optimized_odometry_on_descriptors(Reader& reader, Camera& camera, const int& number_of_iterations, const int& step,
-	vector<int> dynamic_classes, ofstream& output_file, const bool masks = false, const bool local_dynamic = false)
+	vector<int> dynamic_classes, ofstream& output_file, const bool masks = false, const bool local_dynamic = false) // masks - РІС‹РєРёРґС‹РІР°РµС‚ РїРѕ СЃРµРіРјРµРЅС‚Р°С†РёРѕРЅРЅС‹Рј РјР°СЃРєР°Рј РѕСЃРѕР±С‹Рµ С‚РѕС‡РєРё РЅР° РґРёРЅР°РјРёС‡РµСЃРєРёС… РѕР±СЉРµРєС‚Р°С…
 {
-	Mat GLOBAL_COORDS = Mat::eye(Size(4, 4), CV_32FC1); // сюда будем "складывать" последовательно результаты смещений 
+	// РїР°СЂР°РјРµС‚СЂ local_dynamic - РѕСЃС‚Р°РІСЊС‚Рµ false
+	Mat GLOBAL_COORDS = Mat::eye(Size(4, 4), CV_32FC1); 
 	SimpleStruct frame;
 
 	for (int k = 0; k < number_of_iterations; k += step)
@@ -52,17 +47,17 @@ void no_optimized_odometry_on_descriptors(Reader& reader, Camera& camera, const 
 				float x_next = (float(kpm.kp2.at(match.trainIdx).pt.x));
 				float y_next = (float(kpm.kp2.at(match.trainIdx).pt.y));
 
-				if (masks)  // masks == true ? осуществляем проверку на принадлежность особой точки динамическому классу
+				if (masks)  // masks == true ?
 				{
 
 					if (find(dynamic_classes.begin(), dynamic_classes.end(), int(frame.mask.at<uchar>(int(y_current), int(x_current)))) != dynamic_classes.end())
 						continue;
-					if (local_dynamic) // local_dynamic == true ? проверяем чтобы в окрестности не было динамических классов 
+					if (local_dynamic) // local_dynamic == true ? 
 					{
 						if (!is_dynamic(frame.current, frame.mask, Point(x_current, y_current), dynamic_classes) && dynamic_classes.size() != 0
 							&& int(frame.mask.at<uchar>(int(y_current), int(x_current))) != 0
 							&& int(frame.mask.at<uchar>(int(y_current), int(x_current))) != 8)
-							// int(frame.rails.at<uchar>(int(y_current), int(x_current))) == 255) // точка не динамическая - проверяем окрестность 
+							// int(frame.rails.at<uchar>(int(y_current), int(x_current))) == 255) // РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅР°СЏ РїСЂРѕРІРµСЂРєР° РїРѕ РјР°СЃРєР°Рј СЂРµР»СЊСЃ - РїРѕРєР° РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ 
 						{
 							start.push_back(Point2f(x_current, y_current));
 							end.emplace_back(Point2f(x_next, y_next));
@@ -91,16 +86,16 @@ void no_optimized_odometry_on_descriptors(Reader& reader, Camera& camera, const 
 
 			t.convertTo(t, CV_32FC1);
 			R.convertTo(R, CV_32FC1);
+			// РјР°С‚СЂРёС†Р° R0 РёР· main - СЌС‚Рѕ РјР°С‚СЂРёС†Р° РїРµСЂРµС…РѕРґР° РѕС‚ РЎРљ РєР°РјРµСЂС‹ РІ РЎРљ С‚СЂР°РјРІР°СЏ. Р§С‚РѕР±С‹ РїРµСЂРµР№С‚Рё РІ РіР»РѕР±Р°Р»СЊРЅСѓСЋ СЃРёСЃС‚РµРјСѓ РєРѕРѕСЂРґРёРЅР°С‚ РЅСѓР¶РЅРѕ РѕСЃСѓС‰РµСЃС‚РІРёС‚СЊ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ R^-1 * R * R 
+			R = camera.R0.inv() * R * camera.R0; 
+			t = camera.R0.inv() * t; // РїРµСЂРµРІРѕРґРёРј РІРµРєС‚РѕСЂ СЃРјРµС‰РµРЅРёСЏ РІ РЎРљ С‚СЂР°РјРІР°СЏ 
+			t *= (0.001 * frame.dt * frame.speed); // СѓС‡РёС‚С‹РІР°РµРј РјРѕРґСѓР»СЊ СЃРєРѕСЂРѕСЃС‚Рё 
 
-			R = camera.R0.inv() * R * camera.R0; // переводим полученную матрицу поворота R в с.к. робота 
-			t = camera.R0.inv() * t; // -/- с вектором смещения
-			t *= (0.001 * frame.dt * frame.speed); // домножаем на модуль скорости с IMU 
-
-			// записываем R,t в матрцу [R|t] размера 4x4  
+			
 			R.copyTo(local(Rect(0, 0, 3, 3)));
 			t.copyTo(local(Rect(3, 0, 1, 3)));
 
-			GLOBAL_COORDS *= local.inv(); // обратная так как recoverPose возвращает R и t не из current->next, а next->current
+			GLOBAL_COORDS *= local.inv(); // 
 			output_file << GLOBAL_COORDS.at<float>(0, 3) << " " << GLOBAL_COORDS.at<float>(1, 3) << " " << GLOBAL_COORDS.at<float>(2, 3) << endl;
 
 			cout << k << endl;
@@ -108,10 +103,11 @@ void no_optimized_odometry_on_descriptors(Reader& reader, Camera& camera, const 
 	}
 }
 
+// РќР• РћР‘Р РђР©РђР™РўР• Р’РќРРњРђРќРР•  
 void no_optimized_odometry_on_optical_flow(Reader& reader, Camera& camera, const int& number_of_iterations, const int& step,
-	vector<int> dynamic_classes, ofstream& output_file, const bool masks = false, const bool local_dynamic = false)
+	vector<int> dynamic_classes, ofstream& output_file, const bool masks = false, const bool local_dynamic = false) 
 {
-	Mat GLOBAL_COORDS = Mat::eye(Size(4, 4), CV_32FC1); // сюда будем "складывать" последовательно результаты смещений 
+	Mat GLOBAL_COORDS = Mat::eye(Size(4, 4), CV_32FC1); 
 	SimpleStruct frame;
 
 	for (int k = 0; k < number_of_iterations; k += step)
@@ -124,9 +120,9 @@ void no_optimized_odometry_on_optical_flow(Reader& reader, Camera& camera, const
 		vector<Point2f> start, end;
 		Ptr<ORB> detector = ORB::create();
 		resize(frame.rails, frame.rails, Size(frame.current.cols, frame.current.rows), INTER_LINEAR);
-		detector->detectAndCompute(frame.current, noArray(), keypoints_current, descriptors); // находим фичи на первом изображении
+		detector->detectAndCompute(frame.current, noArray(), keypoints_current, descriptors); // Г­Г ГµГ®Г¤ГЁГ¬ ГґГЁГ·ГЁ Г­Г  ГЇГҐГ°ГўГ®Г¬ ГЁГ§Г®ГЎГ°Г Г¦ГҐГ­ГЁГЁ
 		
-		// такая же логика, как и в предыдущем методе
+		// ГІГ ГЄГ Гї Г¦ГҐ Г«Г®ГЈГЁГЄГ , ГЄГ ГЄ ГЁ Гў ГЇГ°ГҐГ¤Г»Г¤ГіГ№ГҐГ¬ Г¬ГҐГІГ®Г¤ГҐ
 		if (masks)
 		{
 			for (int i = 0; i < keypoints_current.size(); ++i)
@@ -138,7 +134,7 @@ void no_optimized_odometry_on_optical_flow(Reader& reader, Camera& camera, const
 					continue;
 				if (local_dynamic)
 					if (!is_dynamic(frame.current, frame.mask, Point(x, y), dynamic_classes) && dynamic_classes.size() != 0 
-						&& int(frame.mask.at<uchar>(int(y), int(x))) != 0 && int(frame.mask.at<uchar>(int(y), int(x))) != 8) // точка не динамическая - проверяем окрестность 
+						&& int(frame.mask.at<uchar>(int(y), int(x))) != 0 && int(frame.mask.at<uchar>(int(y), int(x))) != 8) // ГІГ®Г·ГЄГ  Г­ГҐ Г¤ГЁГ­Г Г¬ГЁГ·ГҐГ±ГЄГ Гї - ГЇГ°Г®ГўГҐГ°ГїГҐГ¬ Г®ГЄГ°ГҐГ±ГІГ­Г®Г±ГІГј 
 						good_keypoints_current.emplace_back(keypoints_current[i].pt);
 					else
 						continue;
@@ -165,15 +161,15 @@ void no_optimized_odometry_on_optical_flow(Reader& reader, Camera& camera, const
 		t.convertTo(t, CV_32FC1);
 		R.convertTo(R, CV_32FC1);
 
-		R = camera.R0.inv() * R * camera.R0; // переводим полученную матрицу поворота R в с.к. робота 
-		t = camera.R0.inv() * t; // -/- с вектором смещения
-		t *= (0.001 * frame.dt * frame.speed); // домножаем на модуль скорости с IMU 
+		R = camera.R0.inv() * R * camera.R0; // ГЇГҐГ°ГҐГўГ®Г¤ГЁГ¬ ГЇГ®Г«ГіГ·ГҐГ­Г­ГіГѕ Г¬Г ГІГ°ГЁГ¶Гі ГЇГ®ГўГ®Г°Г®ГІГ  R Гў Г±.ГЄ. Г°Г®ГЎГ®ГІГ  
+		t = camera.R0.inv() * t; // -/- Г± ГўГҐГЄГІГ®Г°Г®Г¬ Г±Г¬ГҐГ№ГҐГ­ГЁГї
+		t *= (0.001 * frame.dt * frame.speed); // Г¤Г®Г¬Г­Г®Г¦Г ГҐГ¬ Г­Г  Г¬Г®Г¤ГіГ«Гј Г±ГЄГ®Г°Г®Г±ГІГЁ Г± IMU 
 
-		// записываем R,t в матрцу [R|t] размера 4x4  
+		// Г§Г ГЇГЁГ±Г»ГўГ ГҐГ¬ R,t Гў Г¬Г ГІГ°Г¶Гі [R|t] Г°Г Г§Г¬ГҐГ°Г  4x4  
 		R.copyTo(local(Rect(0, 0, 3, 3)));
 		t.copyTo(local(Rect(3, 0, 1, 3)));
 
-		GLOBAL_COORDS *= local.inv(); // обратная так как recoverPose возвращает R и t не из current->next, а next->current
+		GLOBAL_COORDS *= local.inv(); // Г®ГЎГ°Г ГІГ­Г Гї ГІГ ГЄ ГЄГ ГЄ recoverPose ГўГ®Г§ГўГ°Г Г№Г ГҐГІ R ГЁ t Г­ГҐ ГЁГ§ current->next, Г  next->current
 		output_file << GLOBAL_COORDS.at<float>(0, 3) << " " << GLOBAL_COORDS.at<float>(1, 3) << " " << GLOBAL_COORDS.at<float>(2, 3) << endl;
 
 		cout << k << endl;
@@ -182,11 +178,11 @@ void no_optimized_odometry_on_optical_flow(Reader& reader, Camera& camera, const
 
 
 
-// здесь оптимизация идет по точкам в С.К. камеры, без регуляризаторов на Z = 0
+// РќР• РћР‘Р РђР©РђР™РўР• Р’РќРРњРђРќРР•
 void optimized_on_camera_points_descriptors(Reader& reader, Camera& camera, const int& number_of_iterations, const int& step,
 	vector<int> dynamic_classes, ofstream& output_file)
 {
-	Mat GLOBAL_COORDS = Mat::eye(Size(4, 4), CV_32FC1); // сюда будем "складывать" последовательно результаты смещений 
+	Mat GLOBAL_COORDS = Mat::eye(Size(4, 4), CV_32FC1); // Г±ГѕГ¤Г  ГЎГіГ¤ГҐГ¬ "Г±ГЄГ«Г Г¤Г»ГўГ ГІГј" ГЇГ®Г±Г«ГҐГ¤Г®ГўГ ГІГҐГ«ГјГ­Г® Г°ГҐГ§ГіГ«ГјГІГ ГІГ» Г±Г¬ГҐГ№ГҐГ­ГЁГ© 
 	SimpleStruct frame;
 	Mat plane(Size(4, 1), CV_32FC1); // z = 0;
 	plane.at<float>(0, 0) = 0;
@@ -202,8 +198,8 @@ void optimized_on_camera_points_descriptors(Reader& reader, Camera& camera, cons
 		{
 			KeyPointMatches kpm = align_images(frame.current, frame.next);
 			vector<Point2f> start, end;
-			vector<Point2f> ground_points_next; // ВНИМАНИЕ: это точки на изображении 
-			vector<Vec3f> ground_points_current; // ВНИМАНИЕ: это точки в R3 в С.К. камеры
+			vector<Point2f> ground_points_next; // Г‚ГЌГ€ГЊГЂГЌГ€Г…: ГЅГІГ® ГІГ®Г·ГЄГЁ Г­Г  ГЁГ§Г®ГЎГ°Г Г¦ГҐГ­ГЁГЁ 
+			vector<Vec3f> ground_points_current; // Г‚ГЌГ€ГЊГЂГЌГ€Г…: ГЅГІГ® ГІГ®Г·ГЄГЁ Гў R3 Гў Г‘.ГЉ. ГЄГ Г¬ГҐГ°Г»
 			for (auto& match : kpm.matches)
 			{
 				float x_current = (float(kpm.kp1.at(match.queryIdx).pt.x));
@@ -217,9 +213,9 @@ void optimized_on_camera_points_descriptors(Reader& reader, Camera& camera, cons
 				{
 					start.push_back(Point2f(x_current, y_current));
 					end.emplace_back(Point2f(x_next, y_next));
-					if (int(frame.mask.at<uchar>(int(y_current), int(x_current))) == 0) // если точка лежит на земле и в окрестности нету динамических точек
+					if (int(frame.mask.at<uchar>(int(y_current), int(x_current))) == 0) // ГҐГ±Г«ГЁ ГІГ®Г·ГЄГ  Г«ГҐГ¦ГЁГІ Г­Г  Г§ГҐГ¬Г«ГҐ ГЁ Гў Г®ГЄГ°ГҐГ±ГІГ­Г®Г±ГІГЁ Г­ГҐГІГі Г¤ГЁГ­Г Г¬ГЁГ·ГҐГ±ГЄГЁГµ ГІГ®Г·ГҐГЄ
 					{
-						// по факту, здесь собираем точки для оптимизации, потому что можем оценить их положение в R3 из-за z=0
+						// ГЇГ® ГґГ ГЄГІГі, Г§Г¤ГҐГ±Гј Г±Г®ГЎГЁГ°Г ГҐГ¬ ГІГ®Г·ГЄГЁ Г¤Г«Гї Г®ГЇГІГЁГ¬ГЁГ§Г Г¶ГЁГЁ, ГЇГ®ГІГ®Г¬Гі Г·ГІГ® Г¬Г®Г¦ГҐГ¬ Г®Г¶ГҐГ­ГЁГІГј ГЁГµ ГЇГ®Г«Г®Г¦ГҐГ­ГЁГҐ Гў R3 ГЁГ§-Г§Г  z=0
 						ground_points_next.emplace_back(Point2f(x_current, y_current));
 						Mat point3d = estimate(Point(x_current, y_current), camera.R0, camera.t0, camera.K);
 						ground_points_current.emplace_back(Vec3f(point3d.at<float>(0, 0), point3d.at<float>(1, 0), point3d.at<float>(2, 0)));
@@ -237,10 +233,10 @@ void optimized_on_camera_points_descriptors(Reader& reader, Camera& camera, cons
 			R.copyTo(local(Rect(0, 0, 3, 3)));
 			t.copyTo(local(Rect(3, 0, 1, 3)));
 
-			vector<double> rt = get_angles_and_vec(local); // выделили вектор {угол; угол; угол; tx; ty; tz}
+			vector<double> rt = get_angles_and_vec(local); // ГўГ»Г¤ГҐГ«ГЁГ«ГЁ ГўГҐГЄГІГ®Г° {ГіГЈГ®Г«; ГіГЈГ®Г«; ГіГЈГ®Г«; tx; ty; tz}
 			double angles_and_vecs_for_optimize[] = { rt[0], rt[1], rt[2], rt[3], rt[4], rt[5] };
 
-			vector<double*> ground_points_3d_for_optimized; // точки для оптимизации (ВНИМАНИЕ: в С.К. камеры, а не трамвая)
+			vector<double*> ground_points_3d_for_optimized; // ГІГ®Г·ГЄГЁ Г¤Г«Гї Г®ГЇГІГЁГ¬ГЁГ§Г Г¶ГЁГЁ (Г‚ГЌГ€ГЊГЂГЌГ€Г…: Гў Г‘.ГЉ. ГЄГ Г¬ГҐГ°Г», Г  Г­ГҐ ГІГ°Г Г¬ГўГ Гї)
 			for (auto& vec : ground_points_current)
 			{
 				double* buffer = new double[3];
@@ -258,14 +254,14 @@ void optimized_on_camera_points_descriptors(Reader& reader, Camera& camera, cons
 					camera.K.at<float>(0, 0), camera.K.at<float>(1, 1), camera.K.at<float>(0, 2), camera.K.at<float>(1, 2), frame.current.cols, frame.current.rows);
 				problem.AddResidualBlock(cost_function, nullptr, angles_and_vecs_for_optimize, ground_points_3d_for_optimized[k]);
 
-				// фиксируем изначальные значения 
+				// ГґГЁГЄГ±ГЁГ°ГіГҐГ¬ ГЁГ§Г­Г Г·Г Г«ГјГ­Г»ГҐ Г§Г­Г Г·ГҐГ­ГЁГї 
 				double initial_point_movement[6];
 				double initial_point_pt[3];
 				for (int m = 0; m < 3; ++m)
 					initial_point_pt[m] = ground_points_3d_for_optimized[k][m];
 				for (int m = 0; m < 6; ++m)
 					initial_point_movement[m] = angles_and_vecs_for_optimize[m];
-				// ограничения на углы и вектор смещения 
+				// Г®ГЈГ°Г Г­ГЁГ·ГҐГ­ГЁГї Г­Г  ГіГЈГ«Г» ГЁ ГўГҐГЄГІГ®Г° Г±Г¬ГҐГ№ГҐГ­ГЁГї 
 				for (int idx = 0; idx < 6; ++idx)
 				{
 					if (initial_point_movement[idx] >= 0)
@@ -279,7 +275,7 @@ void optimized_on_camera_points_descriptors(Reader& reader, Camera& camera, cons
 						problem.SetParameterUpperBound(angles_and_vecs_for_optimize, idx, initial_point_movement[idx] * 0.80);
 					}
 				}
-				// ограничения на координаты
+				// Г®ГЈГ°Г Г­ГЁГ·ГҐГ­ГЁГї Г­Г  ГЄГ®Г®Г°Г¤ГЁГ­Г ГІГ»
 				for (int idx = 0; idx < 3; ++idx)
 				{
 					if (initial_point_pt[idx] >= 0)
@@ -294,16 +290,16 @@ void optimized_on_camera_points_descriptors(Reader& reader, Camera& camera, cons
 					}
 				}
 			}
-			// решаем проблему
+			// Г°ГҐГёГ ГҐГ¬ ГЇГ°Г®ГЎГ«ГҐГ¬Гі
 			ceres::Solver::Options options;
 			options.linear_solver_type = ceres::DENSE_SCHUR;
 			options.minimizer_progress_to_stdout = true;
 			ceres::Solver::Summary summary;
 			ceres::Solve(options, &problem, &summary);
 
-			///////////////////////////			ОПТИМИЗАЦИЯ				///////////////////////////////////
+			///////////////////////////			ГЋГЏГ’Г€ГЊГ€Г‡ГЂГ–Г€Гџ				///////////////////////////////////
 
-			////////////////////////// ПЕРЕХОД В ГЛОБАЛЬНУЮ СК          //////////////////////////////////
+			////////////////////////// ГЏГ…ГђГ…Г•ГЋГ„ Г‚ ГѓГ‹ГЋГЃГЂГ‹ГњГЌГ“Гћ Г‘ГЉ          //////////////////////////////////
 
 			local = reconstruct_from_v6(angles_and_vecs_for_optimize);
 
@@ -318,7 +314,7 @@ void optimized_on_camera_points_descriptors(Reader& reader, Camera& camera, cons
 			R.copyTo(local(Rect(0, 0, 3, 3)));
 			t.copyTo(local(Rect(3, 0, 1, 3)));
 
-			////////////////////////// ПЕРЕХОД В ГЛОБАЛЬНУЮ СК          //////////////////////////////////
+			////////////////////////// ГЏГ…ГђГ…Г•ГЋГ„ Г‚ ГѓГ‹ГЋГЃГЂГ‹ГњГЌГ“Гћ Г‘ГЉ          //////////////////////////////////
 
 			GLOBAL_COORDS *= local.inv();
 			output_file << GLOBAL_COORDS.at<float>(0, 3) << " " << GLOBAL_COORDS.at<float>(1, 3) << " " << GLOBAL_COORDS.at<float>(2, 3) << endl;
@@ -331,10 +327,11 @@ void optimized_on_camera_points_descriptors(Reader& reader, Camera& camera, cons
 }
 
 
+// РќР• РћР‘Р РђР©РђР™РўР• Р’РќРРњРђРќРР• 
 void optimized_on_camera_points_on_flow(Reader& reader, Camera& camera, const int& number_of_iterations, const int& step,
 	vector<int> dynamic_classes, ofstream& output_file)
 {
-	Mat GLOBAL_COORDS = Mat::eye(Size(4, 4), CV_32FC1); // сюда будем "складывать" последовательно результаты смещений 
+	Mat GLOBAL_COORDS = Mat::eye(Size(4, 4), CV_32FC1); 
 	SimpleStruct frame;
 	Mat plane(Size(4, 1), CV_32FC1); // z = 0;
 	plane.at<float>(0, 0) = 0;
@@ -379,7 +376,7 @@ void optimized_on_camera_points_on_flow(Reader& reader, Camera& camera, const in
 			{
 				if (int(frame.mask.at<uchar>(int(y_current), int(x_current))) == 0)
 				{
-					Mat pt_world = general_estimate(Point(int(x_current), int(y_current)), camera.R0, camera.t0, camera.K, plane); // pt3d уже для перевода в R3 в world
+					Mat pt_world = general_estimate(Point(int(x_current), int(y_current)), camera.R0, camera.t0, camera.K, plane); // pt3d ГіГ¦ГҐ Г¤Г«Гї ГЇГҐГ°ГҐГўГ®Г¤Г  Гў R3 Гў world
 					if (pt_world.at<float>(0, 0) > -5 && pt_world.at<float>(0, 0) < 5)
 					{
 						Mat point3d = estimate(Point(points.first[i].x, points.first[i].y), camera.R0, camera.t0, camera.K);
@@ -402,10 +399,10 @@ void optimized_on_camera_points_on_flow(Reader& reader, Camera& camera, const in
 		R.copyTo(local(Rect(0, 0, 3, 3)));
 		t.copyTo(local(Rect(3, 0, 1, 3)));
 
-		vector<double> rt = get_angles_and_vec(local); // выделили вектор {угол; угол; угол; tx; ty; tz}
+		vector<double> rt = get_angles_and_vec(local); // ГўГ»Г¤ГҐГ«ГЁГ«ГЁ ГўГҐГЄГІГ®Г° {ГіГЈГ®Г«; ГіГЈГ®Г«; ГіГЈГ®Г«; tx; ty; tz}
 		double angles_and_vecs_for_optimize[] = { rt[0], rt[1], rt[2], rt[3], rt[4], rt[5] };
 
-		vector<double*> ground_points_3d_for_optimized; // точки для оптимизации (ВНИМАНИЕ: в С.К. камеры, а не трамвая)
+		vector<double*> ground_points_3d_for_optimized; // ГІГ®Г·ГЄГЁ Г¤Г«Гї Г®ГЇГІГЁГ¬ГЁГ§Г Г¶ГЁГЁ (Г‚ГЌГ€ГЊГЂГЌГ€Г…: Гў Г‘.ГЉ. ГЄГ Г¬ГҐГ°Г», Г  Г­ГҐ ГІГ°Г Г¬ГўГ Гї)
 		for (auto& vec : ground_points_current)
 		{
 			double* buffer = new double[3];
@@ -423,14 +420,14 @@ void optimized_on_camera_points_on_flow(Reader& reader, Camera& camera, const in
 				camera.K.at<float>(0, 0), camera.K.at<float>(1, 1), camera.K.at<float>(0, 2), camera.K.at<float>(1, 2), frame.current.cols, frame.current.rows);
 			problem.AddResidualBlock(cost_function, nullptr, angles_and_vecs_for_optimize, ground_points_3d_for_optimized[k]);
 
-			// фиксируем изначальные значения 
+			// ГґГЁГЄГ±ГЁГ°ГіГҐГ¬ ГЁГ§Г­Г Г·Г Г«ГјГ­Г»ГҐ Г§Г­Г Г·ГҐГ­ГЁГї 
 			double initial_point_movement[6];
 			double initial_point_pt[3];
 			for (int m = 0; m < 3; ++m)
 				initial_point_pt[m] = ground_points_3d_for_optimized[k][m];
 			for (int m = 0; m < 6; ++m)
 				initial_point_movement[m] = angles_and_vecs_for_optimize[m];
-			// ограничения на углы и вектор смещения 
+			// Г®ГЈГ°Г Г­ГЁГ·ГҐГ­ГЁГї Г­Г  ГіГЈГ«Г» ГЁ ГўГҐГЄГІГ®Г° Г±Г¬ГҐГ№ГҐГ­ГЁГї 
 			for (int idx = 0; idx < 6; ++idx)
 			{
 				if (initial_point_movement[idx] >= 0)
@@ -444,7 +441,7 @@ void optimized_on_camera_points_on_flow(Reader& reader, Camera& camera, const in
 					problem.SetParameterUpperBound(angles_and_vecs_for_optimize, idx, initial_point_movement[idx] * 0.90);
 				}
 			}
-			// ограничения на координаты
+			// Г®ГЈГ°Г Г­ГЁГ·ГҐГ­ГЁГї Г­Г  ГЄГ®Г®Г°Г¤ГЁГ­Г ГІГ»
 			for (int idx = 0; idx < 3; ++idx)
 			{
 				if (initial_point_pt[idx] >= 0)
@@ -459,16 +456,16 @@ void optimized_on_camera_points_on_flow(Reader& reader, Camera& camera, const in
 				}
 			}
 		}
-		// решаем проблему
+		// Г°ГҐГёГ ГҐГ¬ ГЇГ°Г®ГЎГ«ГҐГ¬Гі
 		ceres::Solver::Options options;
 		options.linear_solver_type = ceres::DENSE_SCHUR;
 		options.minimizer_progress_to_stdout = true;
 		ceres::Solver::Summary summary;
 		ceres::Solve(options, &problem, &summary);
 
-		///////////////////////////			ОПТИМИЗАЦИЯ				///////////////////////////////////
+		///////////////////////////			ГЋГЏГ’Г€ГЊГ€Г‡ГЂГ–Г€Гџ				///////////////////////////////////
 
-		////////////////////////// ПЕРЕХОД В ГЛОБАЛЬНУЮ СК          //////////////////////////////////
+		////////////////////////// ГЏГ…ГђГ…Г•ГЋГ„ Г‚ ГѓГ‹ГЋГЃГЂГ‹ГњГЌГ“Гћ Г‘ГЉ          //////////////////////////////////
 
 		local = reconstruct_from_v6(angles_and_vecs_for_optimize);
 
@@ -483,7 +480,7 @@ void optimized_on_camera_points_on_flow(Reader& reader, Camera& camera, const in
 		R.copyTo(local(Rect(0, 0, 3, 3)));
 		t.copyTo(local(Rect(3, 0, 1, 3)));
 
-		////////////////////////// ПЕРЕХОД В ГЛОБАЛЬНУЮ СК          //////////////////////////////////
+		////////////////////////// ГЏГ…ГђГ…Г•ГЋГ„ Г‚ ГѓГ‹ГЋГЃГЂГ‹ГњГЌГ“Гћ Г‘ГЉ          //////////////////////////////////
 
 		GLOBAL_COORDS *= local.inv();
 		output_file << GLOBAL_COORDS.at<float>(0, 3) << " " << GLOBAL_COORDS.at<float>(1, 3) << " " << GLOBAL_COORDS.at<float>(2, 3) << endl;
@@ -493,14 +490,14 @@ void optimized_on_camera_points_on_flow(Reader& reader, Camera& camera, const in
 		cout << k << endl;
 	}
 }
-
+// РћР”РћРњР•РўР РРЇ РЎ РћРџРўРРњРР—РђР¦РР•Р™ Р Р Р•Р“РЈР›РЇР РР—РђРўРћР РћРњ (РћР“Р РђРќРР§Р•РќРРЇРњР РќРђ РўРћР§РљР Р’ РќРЈР›Р•Р’РћР™ РџР›РћРЎРљРћРЎРўР (РџРћРљРђ РћРўР”Р•Р›Р¬РќРћ РќР• РўР Р•РљРђР•Рњ РўРћР§РљР РќРђ Р Р•Р›Р¬РЎРђРҐ))
 void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, const int& number_of_iterations, const int& step,
 	vector<int> dynamic_classes, ofstream& output_file)
 {
 	Mat GLOBAL_COORDS = Mat::eye(Size(4, 4), CV_32FC1);
 	SimpleStruct frame;
 
-	Mat plane(Size(4, 1), CV_32FC1); // z = 0;
+	Mat plane(Size(4, 1), CV_32FC1); // РѕРїСЂРµРґРµР»СЏРµРј РјР°С‚СЂРёС†Сѓ A B C D РїР»РѕСЃРєРѕСЃС‚Рё z = 0 РґР»СЏ РјРµС‚РѕРґР° general_estimate;
 	plane.at<float>(0, 0) = 0;
 	plane.at<float>(0, 1) = 0;
 	plane.at<float>(0, 2) = 1;
@@ -508,9 +505,9 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 
 	for (int k = 0; k < number_of_iterations; k += step)
 	{
-		vector<Mat> floor_points;
+		vector<Mat> floor_points; // С‚РѕС‡РєРё РЅР° РїРѕРІРµСЂС…РЅРѕСЃС‚Рё Р·РµРјР»Рё (РѕРїСЂРµРґРµР»СЏРµРј РїРѕ СЃРµРіРјРµРЅС‚Р°С†РёРѕРЅРЅС‹Рј РјР°СЃРєР°Рј РїРѕРєР° - Р±РµР· СЂРµР»СЊСЃ )
 		Mat local = Mat::eye(Size(4, 4), CV_32FC1);
-		frame = reader.get_frame(step);
+		frame = reader.get_frame(step); // С‡РёС‚Р°РµРј С„СЂРµР№Рј СЃ Р·Р°РґР°РЅРЅР°С‹Рј С€Р°РіРѕРј (СЃРјРѕС‚СЂРё reader)
 		if (frame.speed > 0.1)
 		{
 			KeyPointMatches kpm = align_images(frame.current, frame.next, 1000);
@@ -525,21 +522,20 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 
 				if (find(dynamic_classes.begin(), dynamic_classes.end(), int(frame.mask.at<uchar>(int(v), int(u)))) != dynamic_classes.end())
 					continue;
-
-				//if (!is_dynamic(frame.current, frame.mask, Point(u, v), dynamic_classes)) // проверка окрестности точки на наличие динамических классов 
-					start_points.emplace_back(Point2f(u, v));
-					end_points.emplace_back(Point2f(x_next, y_next));
-					if (int(frame.mask.at<uchar>(int(v), int(u))) == 0) // если точка лежит на земле и в окрестности нету динамических точек
-					{
-						Mat pt_world_floor = general_estimate(Point(int(u), int(v)), camera.R0, camera.t0, camera.K, plane); // pt3d уже для перевода в R3 в world
-						floor_points.emplace_back(pt_world_floor); // точки на полу для оптимизации на первом кадре 
-						image_points.emplace_back(Point2f(x_next, y_next)); // их образы на втором кадре 
-					}
+				
+				start_points.emplace_back(Point2f(u, v));
+				end_points.emplace_back(Point2f(x_next, y_next));
+				if (int(frame.mask.at<uchar>(int(v), int(u))) == 0) 
+				{
+					Mat pt_world_floor = general_estimate(Point(int(u), int(v)), camera.R0, camera.t0, camera.K, plane); // РґР»СЏ С‚РѕС‡РµРє СЃ z = 0 РѕС†РµРЅРёРІР°РµРј РёС… РїРѕР»РѕР¶РµРЅРёРµ РІ СЃРє С‚СЂР°РјРІР°СЏ 
+					floor_points.emplace_back(pt_world_floor); 
+					image_points.emplace_back(Point2f(x_next, y_next)); 
+				}
 			}
-			vector<double*> ground_points_3d_for_optimized; // точки для оптимизации 
+			vector<double*> ground_points_3d_for_optimized; // CERES РїСЂРёРЅРёРјР°РµС‚ РЅР° РІС…РѕРґ double* - РїРѕСЌС‚РѕРјСѓ РєРѕРїРёСЂСѓРµРј РІСЃРµ РґР°РЅРЅС‹Рµ СЃ floor_points 
 			for (auto& pt : floor_points)
 			{
-				double* buffer = new double[3]; // выделяем память
+				double* buffer = new double[3]; 
 				buffer[0] = pt.at<float>(0, 0);
 				buffer[1] = pt.at<float>(1, 0);
 				buffer[2] = pt.at<float>(2, 0);
@@ -547,44 +543,19 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 			}
 			Mat E, R, t, useless_masks;
 			E = findEssentialMat(start_points, end_points, camera.K, RANSAC, 0.99, 1.0, useless_masks);
-			recoverPose(E, start_points, end_points, camera.K, R, t, useless_masks);
+			recoverPose(E, start_points, end_points, camera.K, R, t, useless_masks); // РЅР°С…РѕРґРёРј R, t РІ РЎРљ РљРђРњР•Р Р« ! 
 			t.convertTo(t, CV_32FC1);
 			R.convertTo(R, CV_32FC1);
 			t *= (0.001 * frame.dt * frame.speed);
 			R.copyTo(local(Rect(0, 0, 3, 3)));
 			t.copyTo(local(Rect(3, 0, 1, 3)));
 
-			// на данный момент имеем оценку вектора смещения и матрицу поворота - оптимизируем их 
-
-			// составляем массив double* для Ceres из оценок точек в R3 в с.к. камеры
-
-			vector<double> rt = get_angles_and_vec(local); // выделили вектор {угол; угол; угол; tx; ty; tz}
-			double angles_and_vecs_for_optimize[] = { rt[0], rt[1], rt[2], rt[3], 0, rt[5] };
+			vector<double> rt = get_angles_and_vec(local); 
+			double angles_and_vecs_for_optimize[] = { rt[0], rt[1], rt[2], rt[3], rt[4] , rt[5] }; // РЅР°С‡Р°Р»СЊРЅРѕРµ РїСЂРёР±Р»РёР¶РµРЅРёРµ РґР»СЏ R,t 
 			
-			//////////////////////////////			ОПТИМИЗАЦИЯ				////////////////////////////////
-			// формируем проблему
+			//////////////////////////////			РћРџРўРРњРР—РђР¦РРЇ				////////////////////////////////
 			ceres::Problem problem;
 
-			/// ПРОВЕРКА ФОРМУЛ ///
-			/*for (int c = 0; c < ground_points_3d_camera.size(); ++c)
-			{
-				//cout << R << endl << camera.R0.inv()*t << endl;
-				Mat point(Size(1, 4), CV_32FC1);
-				point.at<float>(0, 0) = ground_points_3d_world[c][0];
-				point.at<float>(1, 0) = ground_points_3d_world[c][1];
-				point.at<float>(2, 0) = ground_points_3d_world[c][2];
-				point.at<float>(3, 0) = 1;
-
-				Mat Rt = Mat::eye(Size(4, 3), CV_32FC1);
-
-				camera.R0.copyTo(Rt(Rect(0, 0, 3, 3)));
-				camera.t0.copyTo(Rt(Rect(3, 0, 1, 3)));
-
-				Mat answer = camera.K*(R*(Rt*point)+t);
-				answer /= answer.at<float>(2, 0);
-				cout << answer.at<float>(0, 0) << " " << answer.at<float>(1, 0) << " " << image_points[c].x << " " << image_points[c].y << endl;
-			}*/
-			/// ПРОВЕРКА ФОРМУЛ ///
 			for (int k = 0; k < ground_points_3d_for_optimized.size(); ++k)
 			{
 				ceres::CostFunction* cost_function = SnavelyReprojectionErrorWorld::Create(double(image_points[k].x), double(image_points[k].y),
@@ -596,7 +567,7 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 				for (int p = 0; p < 6; ++p)
 					start[p] = angles_and_vecs_for_optimize[p];
 
-				for (int p = 0; p < 6; ++p) // ограниения на изменение значения - +- 20% по координате и углам
+				for (int p = 0; p < 6; ++p) // РѕРіСЂР°РЅРёС‡РµРЅРёРµ РЅР° СЃРєРѕР»СЊРєРѕ РјРѕР¶РµРј РѕС‚ РЅР°С‡Р°Р»СЊРЅРѕРіРѕ РїСЂРёР±Р»РёР¶РµРЅРёСЏ СѓС…РѕРґРёС‚СЊ - +- 20% РґР»СЏ СѓРіР»РѕРІ Рё СЃРјРµС‰РµРЅРёР№ 
 				{
 					if (start[p] >= 0)
 					{
@@ -612,7 +583,7 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 				double initial_point_pt[3];
 				for (int m = 0; m < 3; ++m)
 					initial_point_pt[m] = ground_points_3d_for_optimized[k][m];
-				for (int idx = 0; idx < 3; ++idx)
+				for (int idx = 0; idx < 3; ++idx) // РѕРіСЂР°РЅРёС‡РµРЅРёРµ РЅР° СЃРєРѕР»СЊРєРѕ РјРѕР¶РµРј РѕС‚ РЅР°С‡Р°Р»СЊРЅРѕРіРѕ РїСЂРёР±Р»РёР¶РµРЅРёСЏ СѓС…РѕРґРёС‚СЊ - +- 20% РґР»СЏ С‚РѕС‡РµРє РЅР° РїРѕР»Сѓ 
 				{
 					if (ground_points_3d_for_optimized[k][idx] >= 0)
 					{
@@ -626,39 +597,39 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 					}
 				}
 
-				//регуляризация на точки z = 0 ( 0 - > 0.2) 
+				// РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕРµ РѕРіСЂР°РЅРёС‡РµРЅРёРµ РЅР° С‚Рѕ, С‡С‚Рѕ РЅР° Р·РµРјР»Рµ РЅРµ РІС‹С€Рµ 15 СЃРј РјРѕР¶РµРј Р»РµР¶Р°С‚СЊ (РґР°Р»РµРµ РјРѕР¶РЅРѕ С‚РµСЃС‚РёСЂРѕРІР°С‚СЊ СЃ С‚РѕС‡РєР°РјРё РЅР° СЂРµР»СЊСЃР°С…) 
 				problem.SetParameterLowerBound(ground_points_3d_for_optimized[k], 2, 0);
 				problem.SetParameterUpperBound(ground_points_3d_for_optimized[k], 2, 0.15);
 			}
-			// решаем проблему
+			
+			
 			ceres::Solver::Options options;
-			options.linear_solver_type = ceres::DENSE_SCHUR;
-			options.minimizer_progress_to_stdout = true;
+			options.linear_solver_type = ceres::DENSE_SCHUR; // РјРµС‚РѕРґ СЂРµС€РµРЅРёСЏ 
+			options.minimizer_progress_to_stdout = true; // РїРѕРєР°Р·С‹РІР°РµРј СЂРµР·СѓР»СЊС‚Р°С‚С‹ РІ РєРѕРЅСЃРѕР»СЊ 
 			ceres::Solver::Summary summary;
 			ceres::Solve(options, &problem, &summary);
 
-			///////////////////////////			ОПТИМИЗАЦИЯ				///////////////////////////////////
-
-			////////////////////////// ПЕРЕХОД В ГЛОБАЛЬНУЮ СК          //////////////////////////////////
-
-			local = reconstruct_from_v6(angles_and_vecs_for_optimize);
+		
+			local = reconstruct_from_v6(angles_and_vecs_for_optimize); // РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј РјР°С‚СЂРёС†Сѓ [R|t]
 
 			local(Rect(0, 0, 3, 3)).copyTo(R);
 			local(Rect(3, 0, 1, 3)).copyTo(t);
 
-			R = camera.R0.inv() * R * camera.R0;
-			t = camera.R0.inv() * t;
+			R = camera.R0.inv() * R * camera.R0; // РџРµСЂРµРІРѕРґРёРј РјР°С‚СЂРёС†Сѓ РёР· РЎРљ РєР°РјРµСЂС‹ РІ РЎРљ С‚СЂР°РјРІР°СЏ 
+			t = camera.R0.inv() * t; // С‚РѕР¶Рµ СЃР°РјРѕРµ СЃ РІРµРєС‚РѕСЂРѕРј СЃРјРµС‰РµРЅРёСЏ 
 
 			local = Mat::eye(Size(4, 4), CV_32FC1);
 
 			R.copyTo(local(Rect(0, 0, 3, 3)));
 			t.copyTo(local(Rect(3, 0, 1, 3)));
 
-			////////////////////////// ПЕРЕХОД В ГЛОБАЛЬНУЮ СК          //////////////////////////////////
+			
 
 			GLOBAL_COORDS *= local.inv();
+			// РѕС‚РїРёСЃС‹РІР°РµРј СЂРµР·СѓР»СЊС‚Р°С‚
 			output_file << GLOBAL_COORDS.at<float>(0, 3) << " " << GLOBAL_COORDS.at<float>(1, 3) << " " << GLOBAL_COORDS.at<float>(2, 3) << endl;
-
+			
+			//С‡РёСЃС‚РёРј РїР°РјСЏС‚СЊ 
 			for (auto& pt : ground_points_3d_for_optimized)
 				delete[] pt;
 			cout << k << endl;
