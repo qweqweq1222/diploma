@@ -6,7 +6,7 @@
 
 
 
-Mat reconstruct_from_v6(double* alpha_trans)
+Mat reconstruct_from_v6(double* alpha_trans) // С„СѓРЅРєС†РёСЏ РїСЂРёРЅРёРјР°РµС‚ РЅР° РІС…РѕРґ 3 СѓРіР»Р° Рё 3 РєРѕРѕСЂРґРёРЅР°С‚С‹ РІРµРєС‚РѕСЂР° СЃРјРµС‰РµРЅРёСЏ Рё РІРѕР·РІСЂР°С‰Р°РµС‚ РјР°С‚СЂРёС†Сѓ 4x4 [R|t] 
 {
 	Mat answer = Mat::eye(4, 4, CV_32F);
 	double a = alpha_trans[0];
@@ -26,7 +26,7 @@ Mat reconstruct_from_v6(double* alpha_trans)
 	answer.at<float>(2, 3) = alpha_trans[5];
 	return answer;
 } 
-vector<double> get_angles_and_vec(const Mat Rt) // получаем углы из матрицы поворота и вектор t 
+vector<double> get_angles_and_vec(const Mat Rt) // РџСЂРёРЅРёРјР°РµС‚ РЅР° РІС…РѕРґ РјР°С‚СЂРёС†Сѓ 4 x 4 [R|t] - РІРѕР·РІСЂР°С‰Р°РµС‚ 3 СѓРіР»Р° Рё 3 РєРѕРѕСЂРґРёРЅР°С‚С‹ РІРµРєС‚РѕСЂР° СЃРјРµС‰РµРЅРёСЏ 
 {
 	double alpha, beta, gamma;
 	if (abs(Rt.at<float>(0, 2)) < 1)
@@ -51,7 +51,7 @@ vector<double> get_angles_and_vec(const Mat Rt) // получаем углы из матрицы пово
 		beta = M_PI;
 	return { alpha, beta, gamma, Rt.at<float>(0,3), Rt.at<float>(1,3), Rt.at<float>(2,3) };
 }
-KeyPointMatches align_images(cv::Mat& current, cv::Mat& next, const int max_features = 5000) {
+KeyPointMatches align_images(cv::Mat& current, cv::Mat& next, const int max_features = 5000) { // С„СѓРЅРєС†РёСЏ РґР»СЏ РґРµС‚РµРєС‚РёСЂРѕРІР°РЅРёСЏ РѕСЃРѕР±С‹С… С‚РѕС‡РµРє 
 
 	cv::Mat im1Gray, im2Gray, descriptors1, descriptors2;
 	resize(next, next, current.size());
@@ -85,7 +85,7 @@ KeyPointMatches align_images(cv::Mat& current, cv::Mat& next, const int max_feat
 	return KeyPointMatches(good_matches, keypoints1, keypoints2);
 }
 
-vector<Point> get_points_from_rails(Mat& src, Mat& rails_masks, Size& size) // трекинг точек 4-ех точек на рельсах
+vector<Point> get_points_from_rails(Mat& src, Mat& rails_masks, Size& size) // РЅР° РґР°РЅРЅС‹Р№ РјРѕРјРµРЅС‚ РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ - РЅРµ РѕР±СЂР°С‰Р°Р№С‚Рµ РІРЅРёРјР°РЅРёРµ 
 {
 	cvtColor(rails_masks, rails_masks, COLOR_BGR2GRAY);
 	cv::resize(rails_masks, rails_masks, size);
@@ -151,7 +151,6 @@ vector<Point> get_points_from_rails(Mat& src, Mat& rails_masks, Size& size) // т
 
 vector<Mat> get_3d_coords(Camera& camera, vector<Point> pts2d)
 {
-	// перевести в СК камеры
 	float fx = camera.K.at<float>(0, 0);
 	float cx = camera.K.at<float>(0, 2);
 	float r11 = camera.R0.at<float>(0, 0);
@@ -159,8 +158,8 @@ vector<Mat> get_3d_coords(Camera& camera, vector<Point> pts2d)
 	
 	const float d = 1.54;
 
-	float Zcu = d * (fx * r11 + cx * r31) / (pts2d[1].x - pts2d[0].x); // для верхней пары 
-	float Zcl = d * (fx * r11 + cx * r31) / (pts2d[3].x - pts2d[2].x); // для нижней пары
+	float Zcu = d * (fx * r11 + cx * r31) / (pts2d[1].x - pts2d[0].x); // Г¤Г«Гї ГўГҐГ°ГµГ­ГҐГ© ГЇГ Г°Г» 
+	float Zcl = d * (fx * r11 + cx * r31) / (pts2d[3].x - pts2d[2].x); // Г¤Г«Гї Г­ГЁГ¦Г­ГҐГ© ГЇГ Г°Г»
 	vector<Vec3f> pts;
 	for (auto& pt2d : pts2d)
 	{
