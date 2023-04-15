@@ -1,12 +1,13 @@
 #include "reader.h"
 #include "algos.h"
 #include "pointspreparation.h"
-#include "odometries.h"
 #include "final_tests.h"
+#include <opencv2/calib3d.hpp>
 #include <vector>
 #include <algorithm>
-using namespace std;
 
+using namespace std;
+using namespace cv;
 
 int main(void)
 {

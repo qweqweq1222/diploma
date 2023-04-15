@@ -1,8 +1,11 @@
 #pragma once
+
 #include "reader.h"
-#include "pointspreparation.h"
 #include "optim_struct.h"
-# define M_PI  3.14159265358979323846
+#include "pointspreparation.h"
+
+#include <opencv2/features2d.hpp>
+#include <opencv2/highgui.hpp>
 
 
 
