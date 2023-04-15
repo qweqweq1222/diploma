@@ -519,6 +519,9 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 			KeyPointMatches kpm = align_images(frame.current, frame.next, 1000);
 			vector<Point2f> image_points;
 			vector<Point2f> start_points, end_points;
+      if (kpm.matches.size() <= 8) {
+        continue;
+      }
 			for (auto& match : kpm.matches)
 			{
 				float u = (float(kpm.kp1.at(match.queryIdx).pt.x));

@@ -15,7 +15,6 @@ int main(void)
   cout << "data_root = " << data_root << endl;
 	// fs::directory_iterator& src, fs::directory_iterator& masks, const string& time, const string& speed
 	fs::directory_iterator src_images(data_root / "output_src"); // директория с исходными изображениями
-  cout << "src_images" << src_images->path() << endl;
 	fs::directory_iterator masks(data_root / "output_segm"); // директория с масками 
 	fs::directory_iterator rail_masks(data_root); // директория с масками рельс (не нужна пока - сами маски уже есть, но пока без них)
 	//fs::directory_iterator rails_masks("D:/TRAMWAY/content/rail_marking/output/");

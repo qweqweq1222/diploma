@@ -168,7 +168,9 @@ vector<Mat> get_3d_coords(Camera& camera, vector<Point> pts2d) // на данн�
 	{
 
 	}
+  return {};
 }
+
 
 
 
