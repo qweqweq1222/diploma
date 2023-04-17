@@ -1,0 +1,9 @@
+[requires]
+eigen/3.4.0@
+ceres-solver/2.1.0@
+opencv/4.5.5@
+[options]
+opencv:with_ffmpeg=False
+[generators]
+cmake_find_package
+virtualenv

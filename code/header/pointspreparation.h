@@ -1,5 +1,11 @@
 #pragma once
+
 #include "reader.h"
+
+#include <opencv2/imgproc.hpp>
+using namespace std;
+using namespace cv;
+
 Mat estimate(Point pt, Mat& R0, Mat& t0, Mat& K) // не обращайте внимание 
 {
 	Mat Rt = Mat::eye(Size(4, 3), CV_32FC1);

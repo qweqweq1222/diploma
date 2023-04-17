@@ -1,22 +1,25 @@
 #include "reader.h"
 #include "algos.h"
 #include "pointspreparation.h"
-#include "odometries.h"
 #include "final_tests.h"
+#include <opencv2/calib3d.hpp>
 #include <vector>
 #include <algorithm>
-using namespace std;
 
+using namespace std;
+using namespace cv;
 
 int main(void)
 {
+  fs::path data_root{"/Users/prun/tutoring/dron-diploma-data"};
+  cout << "data_root = " << data_root << endl;
 	// fs::directory_iterator& src, fs::directory_iterator& masks, const string& time, const string& speed
-	fs::directory_iterator src_images("D:/TRAMWAY/get.358/output_src/"); // директория с исходными изображениями
-	fs::directory_iterator masks("D:/TRAMWAY/get.358/output_segm/"); // директория с масками 
-	fs::directory_iterator rail_masks("D:/TRAMWAY/content/rail_marking/output/"); // директория с масками рельс (не нужна пока - сами маски уже есть, но пока без них)
+	fs::directory_iterator src_images(data_root / "output_src"); // директория с исходными изображениями
+	fs::directory_iterator masks(data_root / "output_segm"); // директория с масками 
+	fs::directory_iterator rail_masks(data_root); // директория с масками рельс (не нужна пока - сами маски уже есть, но пока без них)
 	//fs::directory_iterator rails_masks("D:/TRAMWAY/content/rail_marking/output/");
-	const string time = "D:/TRAMWAY/get.358/Calib/frame_time.txt"; // txt файл с временем когда был получен кадр 
-	const string speed = "D:/TRAMWAY/get.358/Calib/closest_speeds.txt"; // txt файл с модулем скоростей ближайших для каждого кадра по времени 
+  fs::path time = data_root / "Calib/frame_time.txt"; // txt файл с временем когда был получен кадр 
+  fs::path speed = data_root / "Calib/closest_speeds.txt"; // txt файл с модулем скоростей ближайших для каждого кадра по времени 
 	Reader reader(src_images, masks, rail_masks, time, speed);
 	std::vector<int> dynamic_classes = { 11,12,13,14,15,16,17,18 }; // значение в сегментационной маски динамических объектов 
 	float Kdata[] = { 5.8101144196059124e+02, 0., 4.6611629315197757e+02, 0.,
@@ -42,10 +45,10 @@ int main(void)
 	R0 = (R0 * rotation).inv(); // находим матрицу поворота от СК камеры к СК трамвая 
 	t0 = -R0 * t0; // тоже самое для вектора 
 	Camera camera = { K, R0, t0 };
-	const string prefix = "D:/TRAMWAY/get.358/results_v_diplom/"; // куда будем отписывать результаты (для обычно одометрии 
-	ofstream output_file1(prefix + "vanilla1.txt");
+  fs::path prefix = data_root / "results_v_diplom/"; // куда будем отписывать результаты (для обычно одометрии 
+	ofstream output_file1(prefix / "vanilla1.txt");
 	//no_optimized_odometry_on_descriptors(reader, camera, 1990, 10, dynamic_classes, output_file1, true, false); 
-	ofstream output_file3(prefix + "nightcall.txt"); // куда отписывать результаты оптимизации уже 
+	ofstream output_file3(prefix / "nightcall.txt"); // куда отписывать результаты оптимизации уже 
 	optimized_on_world_points_on_descriptors(reader, camera, 1990, 5, dynamic_classes, output_file3);
 
 	return 0;

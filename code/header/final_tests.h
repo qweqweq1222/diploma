@@ -1,5 +1,11 @@
 #pragma once
 #include "algos.h"
+#include <opencv2/calib3d.hpp>
+#include <opencv2/video.hpp>
+#include <opencv2/imgproc.hpp>
+
+using namespace std;
+using namespace cv;
 
 pair<vector<Point2f>, vector<Point2f>> get_flow(const vector<Point2f>& start, const Mat& current, const Mat& next) 
 {
@@ -513,6 +519,9 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 			KeyPointMatches kpm = align_images(frame.current, frame.next, 1000);
 			vector<Point2f> image_points;
 			vector<Point2f> start_points, end_points;
+      if (kpm.matches.size() <= 8) {
+        continue;
+      }
 			for (auto& match : kpm.matches)
 			{
 				float u = (float(kpm.kp1.at(match.queryIdx).pt.x));

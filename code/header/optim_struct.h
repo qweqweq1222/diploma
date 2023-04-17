@@ -1,5 +1,11 @@
 #pragma once
+
 #include "reader.h"
+#include <ceres/ceres.h>
+#include <ceres/rotation.h>
+using namespace std;
+using namespace cv;
+
 //  НЕ ОБРАЩАЙТЕ ВНИМАНИЕ 
 struct SnavelyReprojectionError {
 	SnavelyReprojectionError(double observed_x, double observed_y, double fx, double fy, double cx, double cy, int width, int height)
