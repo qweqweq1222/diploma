@@ -69,10 +69,6 @@ void no_optimized_odometry_on_descriptors(Reader& reader, Camera& camera, const 
 void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, const int& number_of_iterations, const int& step,
 	vector<int> dynamic_classes, ofstream& output_file)
 {
-	ofstream rails_height;
-	rails_height.open("/home/anreydron/Desktop/get.358/test/no_opt.txt");
-	VideoWriter video("/home/anreydron/Desktop/get.358/test/outcpp.avi", cv::VideoWriter::fourcc('M','J','P','G'), 10, Size(960,600));
-	Mat video_frame;
 	Mat GLOBAL_COORDS = Mat::eye(Size(4, 4), CV_32FC1);
 	SimpleStruct frame;
 
@@ -87,7 +83,6 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 		vector<Mat> floor_points; // точки на поверхности земли (определяем по сегментационным маскам пока - без рельс )
 		Mat local = Mat::eye(Size(4, 4), CV_32FC1);
 		frame = reader.get_frame(step); // читаем фрейм с заданнаым шагом (смотри reader)
-		video_frame = frame.current.clone();
 		if (frame.speed > 0.1)
 		{
 			KeyPointMatches kpm = align_images(frame.current, frame.next, 1000);
@@ -151,29 +146,6 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 			pair<vector<double*>, vector<Point2f>>
 				rails_for_opt = get_rails_for_opt(rails, camera, plane, frame.current, frame.next);
 
-			int counter_video = 0;
-			for(int l = 0; l < rails_for_opt.first.size(); ++l)
-				if(rails_for_opt.first[l] != NULL)
-					++counter_video;
-			if(counter_video == 4)
-			{
-				float dl = abs(rails_for_opt.first[0][0] - rails_for_opt.first[2][0]);
-				float du = abs(rails_for_opt.first[1][0] - rails_for_opt.first[3][0]);
-				if (dl >= 1.5 && dl <= 1.6 && du >= 1.5 && du <= 1.6)
-				{
-					for (int i = 0; i < rails_for_opt.second.size(); ++i)
-						if (rails_for_opt.first[i] != NULL)
-							line(video_frame, pts_on_rails[i], rails_for_opt.second[i], Scalar(255, 0, 255), 5);
-
-					line(video_frame, pts_on_rails[0], pts_on_rails[1], Scalar(0, 0, 255), 3);
-					line(video_frame, pts_on_rails[2], pts_on_rails[3], Scalar(0, 0, 255), 3);
-					circle(video_frame, pts_on_rails[0], 5, Scalar(0, 255, 0), -1);
-					circle(video_frame, pts_on_rails[1], 5, Scalar(0, 255, 0), -1);
-					circle(video_frame, pts_on_rails[2], 5, Scalar(0, 255, 0), -1);
-					circle(video_frame, pts_on_rails[3], 5, Scalar(0, 255, 0), -1);
-				}
-			}
-			video << video_frame;
 			/////////////////////////////           РЕЛЬСЫ                 ////////////////////////////////
 			ceres::Problem problem;
 
@@ -473,19 +445,6 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 			ceres::Solver::Summary summary;
 			ceres::Solve(options, &problem, &summary);
 
-			double avg_z_on_rails = 0;
-			int n = 0;
-			for(int c = 0; c < rails_for_opt.first.size(); ++c)
-			{
-				if(rails_for_opt.first[c] != NULL)
-				{
-					avg_z_on_rails += rails_for_opt.first[c][2];
-					++n;
-				}
-			}
-			avg_z_on_rails /= n;
-			rails_height << avg_z_on_rails << endl;
-
 			local = reconstruct_from_v6(angles_and_vecs_for_optimize); // восстанавливаем матрицу [R|t]
 
 			local(Rect(0, 0, 3, 3)).copyTo(R);
@@ -513,6 +472,4 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 			cout << k << endl;
 		}
 	}
-	video.release();
-	rails_height.close();
 }

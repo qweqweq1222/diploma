@@ -1,1 +1,0 @@
-/usr/bin/c++ CMakeFiles/diplom_na_sda4u.dir/main.cpp.o -o diplom_na_sda4u 
