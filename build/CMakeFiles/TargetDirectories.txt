@@ -1,0 +1,4 @@
+/home/anreydron/CLionProjects/diplom_na_sda4u/build/CMakeFiles/rebuild_cache.dir
+/home/anreydron/CLionProjects/diplom_na_sda4u/build/CMakeFiles/edit_cache.dir
+/home/anreydron/CLionProjects/diplom_na_sda4u/build/CMakeFiles/start.dir
+/home/anreydron/CLionProjects/diplom_na_sda4u/build/CMakeFiles/lb.dir

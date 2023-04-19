@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/project.dir/main.cpp.o -o project  liblb.a 
