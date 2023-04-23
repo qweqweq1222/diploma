@@ -468,6 +468,8 @@ void optimized_on_world_points_on_descriptors(Reader& reader, Camera& camera, co
 			for (auto& pt : ground_points_3d_for_optimized)
 				delete[] pt;
 
+			for(auto& pt : rails_for_opt.first)
+				delete[] pt;
 
 			cout << k << endl;
 		}
